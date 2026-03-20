@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOMNIUM — El Último Soñador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Raleway:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--                  LANDING PAGE                   -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="landing">
+        <div class="landing-bg">
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
+            <div class="particles" id="particles"></div>
+        </div>
+
+        <div class="landing-content">
+            <div class="logo-container">
+                <div class="logo-glow"></div>
+                <h1 class="logo-title">SOMNIUM</h1>
+                <p class="logo-subtitle">El Último Soñador</p>
+            </div>
+
+            <div class="landing-desc">
+                <p>Eres el <span class="highlight">Guardián de los Sueños</span>.</p>
+                <p>Las <span class="highlight-evil">Pesadillas</span> han invadido tu mente.</p>
+                <p>Sobrevive. Despierta. <em>O perece en el olvido.</em></p>
+            </div>
+
+            <div class="controls-preview">
+                <div class="ctrl"><span class="key">WASD</span><span>Moverse</span></div>
+                <div class="ctrl"><span class="key">ESPACIO</span><span>Atacar</span></div>
+                <div class="ctrl"><span class="key">CLIC</span><span>Disparar</span></div>
+            </div>
+
+            <button class="btn-play" id="btnJugar">
+                <span class="btn-text">ENTRAR AL SUEÑO</span>
+                <span class="btn-glow"></span>
+            </button>
+
+            <p class="landing-footer">⚠ Advertencia: Este sueño es peligroso</p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--                   JUEGO HUD                     -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="juego" class="oculto">
+
+        <!-- HUD Superior -->
+        <div id="hud">
+            <div class="hud-left">
+                <div class="hud-label">SOÑADOR</div>
+                <div class="barra-vida-container">
+                    <div class="barra-vida" id="barraVida"></div>
+                    <span class="vida-texto" id="vidaTexto">100/100</span>
+                </div>
+                <div class="hud-stats">
+                    <span>⚡ Vel: <span id="statVel">1.0</span></span>
+                    <span>⚔ Atk: <span id="statAtk">20</span></span>
+                    <span>🔮 Nivel: <span id="statNivel">1</span></span>
+                </div>
+            </div>
+
+            <div class="hud-center">
+                <div class="oleada-info">
+                    <div class="oleada-num">OLEADA <span id="oleadaNum">1</span></div>
+                    <div class="oleada-sub" id="oleadaSub">En progreso...</div>
+                </div>
+            </div>
+
+            <div class="hud-right">
+                <div class="monedas-display">
+                    <span class="moneda-icono">◈</span>
+                    <span id="monedasCount">0</span>
+                    <span class="moneda-label">FRAGMENTOS</span>
+                </div>
+                <div class="enemigos-display">
+                    <span>Pesadillas: <span id="enemigosCount">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas principal -->
+        <canvas id="canvas"></canvas>
+
+        <!-- ═══ OVERLAY: ENTRE OLEADAS ═══ -->
+        <div id="overlayOleada" class="overlay oculto">
+            <div class="overlay-panel panel-oleada">
+                <div class="panel-titulo">
+                    <span id="oleadaCompletadaTitulo">¡OLEADA SUPERADA!</span>
+                </div>
+                <div class="panel-subtitulo" id="oleadaCompletadaSub">Has sobrevivido a la primera pesadilla</div>
+
+                <div class="oleada-recompensa">
+                    <span>◈ +<span id="recompensaMonedas">0</span> Fragmentos Oníricos</span>
+                </div>
+
+                <div class="oleada-botones">
+                    <button class="btn-overlay btn-tienda" id="btnTienda">🏪 VISITAR ENCRUCIJADA</button>
+                    <button class="btn-overlay btn-gacha" id="btnGacha">🎱 CRISTAL DEL DESTINO</button>
+                    <button class="btn-overlay btn-continuar" id="btnContinuarOleada">▶ CONTINUAR</button>
+                </div>
+                <p class="hint-texto">Pulsa ESPACIO para continuar directamente</p>
+            </div>
+        </div>
+
+        <!-- ═══ OVERLAY: TIENDA ═══ -->
+        <div id="overlayTienda" class="overlay oculto">
+            <div class="overlay-panel panel-tienda">
+                <div class="panel-titulo">🏪 LA ENCRUCIJADA ONÍRICA</div>
+                <div class="tienda-monedas">◈ <span id="tiendasMonedas">0</span> Fragmentos</div>
+
+                <div class="tienda-grid" id="tiendaGrid">
+                    <!-- Generado por JS -->
+                </div>
+
+                <button class="btn-overlay btn-cerrar-tienda" id="btnCerrarTienda">✕ CERRAR ENCRUCIJADA</button>
+            </div>
+        </div>
+
+        <!-- ═══ OVERLAY: GACHA ═══ -->
+        <div id="overlayGacha" class="overlay oculto">
+            <div class="overlay-panel panel-gacha">
+                <div class="panel-titulo">🎱 CRISTAL DEL DESTINO</div>
+                <div class="gacha-desc">Invoca el poder del inconsciente</div>
+                <div class="gacha-monedas">◈ <span id="gachaMonedas">0</span> Fragmentos disponibles</div>
+
+                <div class="gacha-opciones">
+                    <div class="gacha-opcion" id="gacha1">
+                        <div class="gacha-bola bola-basica">◉</div>
+                        <div class="gacha-nombre">Invocación Simple</div>
+                        <div class="gacha-precio">◈ 30 Fragmentos</div>
+                        <div class="gacha-rareza">Común ~ Poco Común</div>
+                        <button class="btn-gacha-tirar" data-tipo="simple">INVOCAR</button>
+                    </div>
+                    <div class="gacha-opcion" id="gacha2">
+                        <div class="gacha-bola bola-rara">✦</div>
+                        <div class="gacha-nombre">Invocación Profunda</div>
+                        <div class="gacha-precio">◈ 80 Fragmentos</div>
+                        <div class="gacha-rareza">Poco Común ~ Épico</div>
+                        <button class="btn-gacha-tirar" data-tipo="profunda">INVOCAR</button>
+                    </div>
+                    <div class="gacha-opcion" id="gacha3">
+                        <div class="gacha-bola bola-legendaria">★</div>
+                        <div class="gacha-nombre">Gran Invocación</div>
+                        <div class="gacha-precio">◈ 200 Fragmentos</div>
+                        <div class="gacha-rareza">Épico ~ Legendario</div>
+                        <button class="btn-gacha-tirar" data-tipo="gran">INVOCAR</button>
+                    </div>
+                </div>
+
+                <div id="gachaResultado" class="gacha-resultado oculto">
+                    <div class="resultado-rareza" id="resultadoRareza"></div>
+                    <div class="resultado-icono" id="resultadoIcono"></div>
+                    <div class="resultado-nombre" id="resultadoNombre"></div>
+                    <div class="resultado-desc" id="resultadoDesc"></div>
+                </div>
+
+                <button class="btn-overlay btn-cerrar-tienda" id="btnCerrarGacha">✕ CERRAR CRISTAL</button>
+            </div>
+        </div>
+
+        <!-- ═══ OVERLAY: CUENTA ATRÁS ═══ -->
+        <div id="overlayCuentaAtras" class="overlay oculto">
+            <div class="cuenta-atras-num" id="cuentaAtrasNum">3</div>
+            <div class="cuenta-atras-sub" id="cuentaAtrasOleada">OLEADA 2 — LAS PESADILLAS REGRESAN</div>
+        </div>
+
+        <!-- ═══ OVERLAY: GAME OVER ═══ -->
+        <div id="overlayGameOver" class="overlay oculto">
+            <div class="overlay-panel panel-gameover">
+                <div class="gameover-titulo">EL SUEÑO SE ROMPE</div>
+                <div class="gameover-sub">Has sucumbido al olvido eterno</div>
+                <div class="gameover-stats">
+                    <div class="stat-final"><span>Oleadas superadas</span><strong id="goOleadas">0</strong></div>
+                    <div class="stat-final"><span>Pesadillas eliminadas</span><strong id="goKills">0</strong></div>
+                    <div class="stat-final"><span>Fragmentos obtenidos</span><strong id="goMonedas">0</strong></div>
+                </div>
+                <button class="btn-overlay btn-reiniciar" id="btnReiniciar">↺ VOLVER A SOÑAR</button>
+            </div>
+        </div>
+
+        <!-- ═══ OVERLAY: VICTORIA ═══ -->
+        <div id="overlayVictoria" class="overlay oculto">
+            <div class="overlay-panel panel-victoria">
+                <div class="victoria-titulo">¡EL SUEÑO ES TUYO!</div>
+                <div class="victoria-sub">Has despertado victorioso</div>
+                <button class="btn-overlay btn-reiniciar" id="btnReinVictoria">↺ SOÑAR DE NUEVO</button>
+            </div>
+        </div>
+
+        <!-- Notificaciones flotantes -->
+        <div id="notificaciones"></div>
+
+    </div>
+
+    <script src="juego.js"></script>
+</body>
+</html>
