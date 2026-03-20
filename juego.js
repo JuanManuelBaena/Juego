@@ -115,9 +115,11 @@ class Jugador {
         const nx = this.x + dx * vel;
         const ny = this.y + dy * vel;
 
-        // Colisión con bordes
-        const minX = this.radio, maxX = lienzoCols * tileSize - this.radio;
-        const minY = this.radio + 60, maxY = lienzoFilas * tileSize - this.radio + 60;
+        // Colisión con bordes — usar dimensiones reales del canvas
+        const minX = this.radio;
+        const maxX = lienzoCols - this.radio;
+        const minY = this.radio + 60;
+        const maxY = lienzoFilas - this.radio;
 
         if (!this._colisionaConObstaculo(nx, this.y, obstaculos, tileSize))
             this.x = Math.max(minX, Math.min(maxX, nx));
@@ -304,7 +306,7 @@ class Enemigo {
             this.xp = 200;
         } else if (tipo === "rapido") {
             this.radio = 8;
-            this.velocidad = 3.2;
+            this.velocidad = 2.0;
             this.vidaMax = 40;
             this.ataque = 10;
             this.monedas = 8;
@@ -844,10 +846,6 @@ const juego = (() => {
                 e.preventDefault();
                 dispararJugador();
             }
-            if (e.key === " " && estado.fase === "entre-oleadas") {
-                e.preventDefault();
-                continuarOleada();
-            }
         });
         document.addEventListener("keyup", e => { teclas[e.key] = false; });
         canvas.addEventListener("mousemove", e => {
@@ -909,24 +907,7 @@ const juego = (() => {
     }
 
     function generarObstaculos() {
-        const ts = CONFIG.TILE;
-        const cols  = Math.floor(canvas.width  / ts);
-        const filas = Math.floor((canvas.height - 60) / ts);
-        const obs = [];
-        const cantidad = 35;
-
-        for (let i = 0; i < cantidad; i++) {
-            let col, fila;
-            do {
-                col  = 1 + Math.floor(Math.random() * (cols - 2));
-                fila = 1 + Math.floor(Math.random() * (filas - 2));
-            } while (
-                (Math.abs(col - Math.floor(cols/2)) < 3 && Math.abs(fila - Math.floor(filas/2)) < 3) ||
-                obs.some(o => o.col === col && o.fila === fila)
-            );
-            obs.push({ col, fila });
-        }
-        return obs;
+        return []; // Sin obstáculos
     }
 
     // ─── Sistema de Oleadas ─────────────────
@@ -967,29 +948,45 @@ const juego = (() => {
             tipo = "jefe";
         } else {
             const r = Math.random();
-            if (estado.oleada >= 5 && r < 0.2) tipo = "rapido";
-            else if (estado.oleada >= 8 && r < 0.35) tipo = "tanque";
+            // Más probabilidad de enemigos especiales según oleada
+            const probRapido = Math.min(0.35, 0.05 + estado.oleada * 0.03); // desde oleada 2
+            const probTanque = Math.min(0.30, estado.oleada >= 5 ? 0.05 + (estado.oleada - 5) * 0.025 : 0);
+            if (r < probRapido) tipo = "rapido";
+            else if (r < probRapido + probTanque) tipo = "tanque";
         }
 
         const e = new Enemigo(x, y, tipo);
-        // Escalar stats con oleada
+        // Escalar stats con oleada — curva más pronunciada para mantener el reto
         if (tipo !== "jefe") {
-            const mult = 1 + (estado.oleada - 1) * 0.12;
-            e.vidaMax = Math.floor(e.vidaMax * mult);
+            // HP: sube rápido (+18% por oleada), con aceleración extra cada 5 oleadas
+            const multHP = 1 + (estado.oleada - 1) * 0.18 + Math.floor((estado.oleada - 1) / 5) * 0.25;
+            e.vidaMax = Math.floor(e.vidaMax * multHP);
             e.vida = e.vidaMax;
-            e.ataque = Math.floor(e.ataque * (1 + (estado.oleada - 1) * 0.08));
-            e.monedas = Math.floor(e.monedas * (1 + (estado.oleada - 1) * 0.1));
+
+            // Daño: sube moderado (+10% por oleada)
+            e.ataque = Math.floor(e.ataque * (1 + (estado.oleada - 1) * 0.10));
+
+            // Velocidad: sube suavemente hasta un cap por tipo
+            const capVel = tipo === "rapido" ? 3.2 : tipo === "tanque" ? 2.0 : 2.8;
+            const velExtra = (estado.oleada - 1) * 0.06;
+            e.velocidad = Math.min(capVel, e.velocidad + velExtra);
+
+            // Monedas: también escalan
+            e.monedas = Math.floor(e.monedas * (1 + (estado.oleada - 1) * 0.12));
         } else {
-            // Jefe escala fuertemente
-            const mult = 1 + estado.oleada * 0.15;
-            e.vidaMax = Math.floor(e.vidaMax * mult);
+            // Jefe escala muy fuerte
+            const multJefe = 1 + estado.oleada * 0.20;
+            e.vidaMax = Math.floor(e.vidaMax * multJefe);
             e.vida = e.vidaMax;
+            e.ataque = Math.floor(e.ataque * (1 + estado.oleada * 0.12));
+            e.velocidad = Math.min(2.2, e.velocidad + estado.oleada * 0.04);
         }
 
         enemigos.push(e);
     }
 
     function oleadaCompletada() {
+        if (estado.fase !== "jugando") return; // evitar doble llamada
         estado.fase = "entre-oleadas";
         recompensaOleada = 20 + estado.oleada * 15;
         estado.monedas += recompensaOleada;
@@ -1110,8 +1107,8 @@ const juego = (() => {
             }
         }
 
-        // Jugador
-        jugador.actualizar(teclas, cursor, obstaculos, CONFIG.COLS, CONFIG.FILAS, CONFIG.TILE);
+        // Jugador — pasar dimensiones reales del canvas
+        jugador.actualizar(teclas, cursor, obstaculos, canvas.width, canvas.height, CONFIG.TILE);
 
         // Spawn de enemigos
         timerSpawn++;
@@ -1267,7 +1264,7 @@ const juego = (() => {
         }
 
         // ¿Oleada completada?
-        if (enemigosPorSpawnear === 0 && enemigos.length === 0 && estado.fase === "jugando") {
+        if (enemigosPorSpawnear <= 0 && enemigos.length === 0 && estado.fase === "jugando") {
             oleadaCompletada();
         }
     }
@@ -1283,11 +1280,6 @@ const juego = (() => {
 
         // Grid decorativo
         dibujarGrid();
-
-        // Obstáculos
-        for (const obs of obstaculos) {
-            dibujarObstaculo(obs);
-        }
 
         // Monedas
         for (const m of monedas) m.dibujar(ctx);
@@ -1406,6 +1398,7 @@ const juego = (() => {
 
     function cerrarTienda() {
         cerrarOverlay("overlayTienda");
+        mostrarOverlay("overlayOleada");
     }
 
     function renderizarTienda() {
@@ -1463,11 +1456,14 @@ const juego = (() => {
     function abrirGacha() {
         document.getElementById("gachaMonedas").textContent = estado.monedas;
         document.getElementById("gachaResultado").classList.add("oculto");
+        document.getElementById("gachaRuleta").classList.add("oculto");
+        document.querySelector(".ruleta-ventana").classList.remove("flash");
         mostrarOverlay("overlayGacha");
     }
 
     function cerrarGacha() {
         cerrarOverlay("overlayGacha");
+        mostrarOverlay("overlayOleada");
     }
 
     function ejecutarGacha(tipo) {
@@ -1479,37 +1475,137 @@ const juego = (() => {
             return;
         }
 
+        // Bloquear botones durante la animación
+        document.querySelectorAll(".btn-gacha-tirar").forEach(b => b.disabled = true);
+
         estado.monedas -= precio;
         document.getElementById("gachaMonedas").textContent = estado.monedas;
 
         const resultado = tirarGacha(tipo);
 
-        // Aplicar efecto
-        resultado.efecto(jugador, estado.mejoras);
+        // Ocultar resultado anterior, mostrar ruleta
+        document.getElementById("gachaResultado").classList.add("oculto");
+        const ruletaDiv = document.getElementById("gachaRuleta");
+        ruletaDiv.classList.remove("oculto");
 
-        // Mostrar resultado
-        const resDiv = document.getElementById("gachaResultado");
-        resDiv.classList.remove("oculto");
+        // Construir la cinta de la ruleta
+        _animarRuleta(resultado, () => {
+            // Callback al terminar: aplicar efecto y mostrar resultado
+            resultado.efecto(jugador, estado.mejoras);
 
-        document.getElementById("resultadoRareza").className = `resultado-rareza ${resultado.rareza}`;
-        const rarezaTexto = {
-            "comun": "✦ COMÚN",
-            "poco-comun": "✦✦ POCO COMÚN",
-            "epico": "✦✦✦ ÉPICO",
-            "legendario": "★★★ LEGENDARIO"
-        };
-        document.getElementById("resultadoRareza").textContent = rarezaTexto[resultado.rareza] || "✦";
-        document.getElementById("resultadoIcono").textContent = resultado.icono;
-        document.getElementById("resultadoNombre").textContent = resultado.nombre;
-        document.getElementById("resultadoDesc").textContent = resultado.desc;
+            const resDiv = document.getElementById("gachaResultado");
+            resDiv.classList.remove("oculto");
 
-        // Animación reset
-        resDiv.style.animation = "none";
-        resDiv.offsetHeight;
-        resDiv.style.animation = "resultadoEntrada 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
+            const rarezaTexto = {
+                "comun": "✦ COMÚN",
+                "poco-comun": "✦✦ POCO COMÚN",
+                "epico": "✦✦✦ ÉPICO",
+                "legendario": "★★★ LEGENDARIO"
+            };
+            document.getElementById("resultadoRareza").className = `resultado-rareza ${resultado.rareza}`;
+            document.getElementById("resultadoRareza").textContent = rarezaTexto[resultado.rareza] || "✦";
+            document.getElementById("resultadoIcono").textContent = resultado.icono;
+            document.getElementById("resultadoNombre").textContent = resultado.nombre;
+            document.getElementById("resultadoDesc").textContent = resultado.desc;
 
-        mostrarNotificacion(`🎱 ${resultado.nombre} — ${rarezaTexto[resultado.rareza]}`, "notif-gacha");
-        actualizarHUD();
+            resDiv.style.animation = "none";
+            resDiv.offsetHeight;
+            resDiv.style.animation = "resultadoEntrada 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
+
+            mostrarNotificacion(`🎱 ${resultado.nombre} — ${rarezaTexto[resultado.rareza]}`, "notif-gacha");
+            actualizarHUD();
+
+            // Reactivar botones
+            document.querySelectorAll(".btn-gacha-tirar").forEach(b => b.disabled = false);
+        });
+    }
+
+    // Pool completo de todos los items para la ruleta visual
+    const POOL_RULETA_VISUAL = [
+        ...TABLA_GACHA.comun,
+        ...TABLA_GACHA.pocoComan,
+        ...TABLA_GACHA.epico,
+        ...TABLA_GACHA.legendario,
+    ];
+
+    function _animarRuleta(resultado, callback) {
+        const cinta = document.getElementById("ruletaCinta");
+        const ventana = document.querySelector(".ruleta-ventana");
+        const ITEM_H = 80;
+        const ITEMS_ANTES = 18; // items que pasan antes de frenar
+        const ITEMS_TOTAL = ITEMS_ANTES + 3;
+
+        // Generar lista aleatoria de items + el ganador centrado al final
+        const items = [];
+        for (let i = 0; i < ITEMS_ANTES; i++) {
+            items.push(POOL_RULETA_VISUAL[Math.floor(Math.random() * POOL_RULETA_VISUAL.length)]);
+        }
+        // El ganador queda en posición ITEMS_ANTES (índice), que será el centro
+        items.push(resultado);
+        // Dos más después para que no se vea el corte
+        for (let i = 0; i < 2; i++) {
+            items.push(POOL_RULETA_VISUAL[Math.floor(Math.random() * POOL_RULETA_VISUAL.length)]);
+        }
+
+        // Renderizar cinta
+        cinta.innerHTML = "";
+        cinta.style.transform = "translateY(0)";
+        cinta.style.transition = "none";
+
+        items.forEach(item => {
+            const div = document.createElement("div");
+            const rClass = item.rareza === "poco-comun" ? "poco-comun" : item.rareza;
+            div.className = `ruleta-item r-${rClass}`;
+            div.innerHTML = `
+                <div class="ruleta-item-icono">${item.icono}</div>
+                <div class="ruleta-item-nombre">${item.nombre}</div>
+                <div class="ruleta-item-rareza ruleza-r-${rClass}">${
+                    rClass === "comun" ? "COMÚN" :
+                    rClass === "poco-comun" ? "POCO COMÚN" :
+                    rClass === "epico" ? "ÉPICO" : "LEGENDARIO"
+                }</div>
+            `;
+            cinta.appendChild(div);
+        });
+
+        // Posición inicial: centrar el primer item visible
+        const startY = ITEM_H; // Empezamos un poco dentro para efecto
+        cinta.style.transform = `translateY(${startY}px)`;
+
+        // El destino: el item ganador (índice ITEMS_ANTES) centrado en la ventana (100px = mitad de 200px)
+        const targetY = -(ITEMS_ANTES * ITEM_H) + 100; // 100 = centro de ventana (200/2)
+
+        // Forzar reflow
+        cinta.offsetHeight;
+
+        // Animación con easing: rápido al principio, frena al final
+        const duracion = 2800; // ms
+        const start = performance.now();
+
+        function easeOutQuart(t) {
+            return 1 - Math.pow(1 - t, 4);
+        }
+
+        function animar(now) {
+            const elapsed = now - start;
+            const t = Math.min(elapsed / duracion, 1);
+            const eased = easeOutQuart(t);
+
+            const currentY = startY + (targetY - startY) * eased;
+            cinta.style.transform = `translateY(${currentY}px)`;
+
+            if (t < 1) {
+                requestAnimationFrame(animar);
+            } else {
+                // Flash y callback
+                ventana.classList.remove("flash");
+                ventana.offsetHeight;
+                ventana.classList.add("flash");
+                setTimeout(callback, 500);
+            }
+        }
+
+        requestAnimationFrame(animar);
     }
 
     // ─── Game Over / Victoria ────────────────

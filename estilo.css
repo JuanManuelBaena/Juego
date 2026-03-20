@@ -849,7 +849,122 @@ html, body {
     to   { opacity: 0; transform: translateX(20px); }
 }
 
-/* ── Scrollbar personalizada ─────────────────────────── */
+/* ── RULETA GACHA ────────────────────────────────────── */
+.gacha-ruleta {
+    margin: 0 auto 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.ruleta-ventana {
+    position: relative;
+    width: 220px;
+    height: 200px;
+    border: 2px solid rgba(155,110,243,0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.4);
+    box-shadow: 0 0 30px rgba(108,63,197,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+}
+
+.ruleta-cinta {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    transition: none;
+    will-change: transform;
+}
+
+.ruleta-item {
+    width: 100%;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.ruleta-item-icono { font-size: 26px; line-height: 1; }
+.ruleta-item-nombre {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(232,234,246,0.8);
+    text-align: center;
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+.ruleta-item-rareza {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.ruleza-r-comun      { color: #90a4ae; }
+.ruleza-r-poco-comun { color: #69f0ae; }
+.ruleza-r-epico      { color: #ce93d8; }
+.ruleza-r-legendario { color: #ffd54f; }
+
+/* Fondo por rareza */
+.ruleta-item.r-comun      { background: rgba(144,164,174,0.05); }
+.ruleta-item.r-poco-comun { background: rgba(105,240,174,0.06); }
+.ruleta-item.r-epico      { background: rgba(206,147,216,0.08); }
+.ruleta-item.r-legendario { background: rgba(255,213,79,0.12); }
+.ruleta-item.r-legendario .ruleta-item-nombre { color: #ffd54f; }
+
+/* Máscaras de desvanecimiento arriba/abajo */
+.ruleta-mascara {
+    position: absolute;
+    left: 0; right: 0;
+    height: 60px;
+    z-index: 2;
+    pointer-events: none;
+}
+.ruleta-mascara.top {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(10,14,46,0.95), transparent);
+}
+.ruleta-mascara.bottom {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(10,14,46,0.95), transparent);
+}
+
+/* Selector central (la línea de selección) */
+.ruleta-selector {
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 80px;
+    border-top: 2px solid rgba(0,229,255,0.7);
+    border-bottom: 2px solid rgba(0,229,255,0.7);
+    background: rgba(0,229,255,0.04);
+    z-index: 3;
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(0,229,255,0.2);
+}
+
+/* Flash final cuando para la ruleta */
+@keyframes ruletaFlash {
+    0%   { box-shadow: 0 0 30px rgba(0,229,255,0.3); }
+    30%  { box-shadow: 0 0 60px rgba(0,229,255,0.9), inset 0 0 30px rgba(0,229,255,0.15); }
+    100% { box-shadow: 0 0 30px rgba(108,63,197,0.4); }
+}
+.ruleta-ventana.flash {
+    animation: ruletaFlash 0.5s ease forwards;
+}
+
+
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(108,63,197,0.4); border-radius: 2px; }
